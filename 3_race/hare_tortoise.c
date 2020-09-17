@@ -39,8 +39,8 @@ void *Turtle(void *race);
 void *Hare(void *race);
 void *Randomizer(void *race);
 void *Report(void *race);
-void begin(struct race *race, int turn);
-void end(struct race *race, int turn);
+void begin_turn(struct race *race, int turn);
+void end_turn(struct race *race, int turn);
 
 char init(struct race *race)
 {
@@ -85,10 +85,10 @@ void *Turtle(void *arg)
 
 	while (race->race_on)
 	{
-		begin(race, turn);
+		begin_turn(race, turn);
 		printf("turtle\n");
 		sleep(1);
-		end(race, turn);
+		end_turn(race, turn);
 	}
 
 	return NULL;
@@ -101,10 +101,10 @@ void *Hare(void *arg)
 
 	while (race->race_on)
 	{
-		begin(race, turn);
+		begin_turn(race, turn);
 		printf("hare\n");
 		sleep(1);
-		end(race, turn);
+		end_turn(race, turn);
 	}
 	return NULL;
 }
@@ -116,10 +116,10 @@ void *Randomizer(void *arg)
 
 	while (race->race_on)
 	{
-		begin(race, turn);
+		begin_turn(race, turn);
 		printf("randomizer\n");
 		sleep(1);
-		end(race, turn);
+		end_turn(race, turn);
 	}
 	return NULL;
 }
@@ -131,19 +131,20 @@ void *Report(void *arg)
 
 	while (race->race_on)
 	{
-		begin(race, turn);
+		begin_turn(race, turn);
 		printf("report\n");
 		sleep(1);
-		end(race, turn);
+		end_turn(race, turn);
 	}
 	return NULL;
 }
 
-void begin(struct race *race, int turn)
+void begin_turn(struct race *race, int turn)
 {
 	switch (turn)
 	{
 	case 0:
+		printf("Current Time: %d\n", race->clk);
 		lock_acquire(&race->lock0);
 		while (race->turn != turn)
 			cond_wait(&race->cond0, &race->lock0);
@@ -166,7 +167,7 @@ void begin(struct race *race, int turn)
 	}
 }
 
-void end(struct race *race, int turn)
+void end_turn(struct race *race, int turn)
 {
 	race->turn = (race->turn + 1) % 4;
 
@@ -185,6 +186,7 @@ void end(struct race *race, int turn)
 		lock_release(&race->lock2);
 		break;
 	case 3:
+		race->clk++;
 		cond_signal(&race->cond0, &race->lock3);
 		lock_release(&race->lock3);
 		break;
