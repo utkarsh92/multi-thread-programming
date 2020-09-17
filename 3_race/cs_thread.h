@@ -12,12 +12,14 @@
 // are initialised before use.
 #define LOCK_COND_INIT_MAGIC 0x4a3acd94
 
-struct lock {
+struct lock
+{
 	int init;
 	pthread_mutex_t mutex;
 };
 
-struct condition {
+struct condition
+{
 	int init;
 	pthread_cond_t cond;
 };
@@ -34,7 +36,8 @@ static void cond_broadcast(struct condition *cond, struct lock *lock) __attribut
 static void
 __assert(int satisfied, const char *message)
 {
-	if (!satisfied) {
+	if (!satisfied)
+	{
 		fprintf(stderr, "FATAL ERROR: %s\n", message);
 		exit(1);
 	}
@@ -51,7 +54,7 @@ static void
 lock_acquire(struct lock *lock)
 {
 	__assert(lock->init == LOCK_COND_INIT_MAGIC,
-		"lock_acquire used before lock was initialised!");
+			 "lock_acquire used before lock was initialised!");
 	pthread_mutex_lock(&lock->mutex);
 }
 
@@ -59,9 +62,9 @@ static void
 lock_release(struct lock *lock)
 {
 	__assert(lock->init == LOCK_COND_INIT_MAGIC,
-		"lock_release used before lock was initialised!");
+			 "lock_release used before lock was initialised!");
 	__assert(pthread_mutex_trylock(&lock->mutex) != 0,
-		"lock_release on unlocked lock!");
+			 "lock_release on unlocked lock!");
 	pthread_mutex_unlock(&lock->mutex);
 }
 
@@ -76,15 +79,15 @@ static void
 cond_wait(struct condition *cond, struct lock *lock)
 {
 	// Assert the lock is already held. It should be held
-	// by this caller, so while this simple check won't 
+	// by this caller, so while this simple check won't
 	// catch all bad invocations (somebody else could have
 	// locked it, rather than us) at least it's a start...
 	__assert(pthread_mutex_trylock(&lock->mutex) != 0,
-		"cond_wait not called with lock held!");
+			 "cond_wait not called with lock held!");
 	__assert(cond->init == LOCK_COND_INIT_MAGIC,
-		"cond_wait used before cond was initialised!");
+			 "cond_wait used before cond was initialised!");
 	__assert(lock->init == LOCK_COND_INIT_MAGIC,
-		"cond_wait used before lock was initialised!");
+			 "cond_wait used before lock was initialised!");
 	pthread_cond_wait(&cond->cond, &lock->mutex);
 }
 
@@ -93,11 +96,11 @@ cond_signal(struct condition *cond, struct lock *lock)
 {
 	// See comment in cond_wait().
 	__assert(pthread_mutex_trylock(&lock->mutex) != 0,
-		"cond_signal not called with lock held!");
+			 "cond_signal not called with lock held!");
 	__assert(cond->init == LOCK_COND_INIT_MAGIC,
-		"cond_signal used before cond was initialised!");
+			 "cond_signal used before cond was initialised!");
 	__assert(lock->init == LOCK_COND_INIT_MAGIC,
-		"cond_signal used before lock was initialised!");
+			 "cond_signal used before lock was initialised!");
 	pthread_cond_signal(&cond->cond);
 }
 
@@ -106,10 +109,10 @@ cond_broadcast(struct condition *cond, struct lock *lock)
 {
 	// See comment in cond_wait().
 	__assert(pthread_mutex_trylock(&lock->mutex) != 0,
-		"cond_broadcast not called with lock held!");
+			 "cond_broadcast not called with lock held!");
 	__assert(cond->init == LOCK_COND_INIT_MAGIC,
-		"cond_broadcast used before cond was initialised!");
+			 "cond_broadcast used before cond was initialised!");
 	__assert(lock->init == LOCK_COND_INIT_MAGIC,
-		"cond_broadcast used before lock was initialised!");
+			 "cond_broadcast used before lock was initialised!");
 	pthread_cond_broadcast(&cond->cond);
 }
