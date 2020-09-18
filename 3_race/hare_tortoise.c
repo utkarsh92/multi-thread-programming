@@ -32,7 +32,7 @@ struct race
 	int clk;
 	int turn;
 	int hare_position, turtle_position;
-	struct lock lock0, lock1, lock2, lock3;
+	struct lock lock0;
 	struct condition cond0, cond1, cond2, cond3;
 };
 
@@ -48,10 +48,6 @@ char init(struct race *race)
 	pthread_t *threads = (pthread_t *)malloc(4 * sizeof(pthread_t));
 
 	lock_init(&race->lock0);
-	lock_init(&race->lock1);
-	lock_init(&race->lock2);
-	lock_init(&race->lock3);
-
 	cond_init(&race->cond0);
 	cond_init(&race->cond1);
 	cond_init(&race->cond2);
@@ -64,8 +60,8 @@ char init(struct race *race)
 	race->race_on = 1;
 
 	//test parameters
-	race->printing_delay = 1;
-	race->finish_distance = 1000;
+	// race->printing_delay = 1;
+	// race->finish_distance = 1000;
 
 
 	lock_acquire(&race->lock0);
@@ -105,7 +101,7 @@ void *Randomizer(void *arg)
 					if (race->turtle_position < 0)
 						race->turtle_position = 0;
 
-					printf("**GOD moved Turtle to %d**\n", race->turtle_position);
+					printf("**GOD moved Turtle to %d at time %d**\n", race->turtle_position, race->clk);
 				}
 				else
 				{
@@ -113,7 +109,7 @@ void *Randomizer(void *arg)
 					if (race->hare_position < 0)
 						race->hare_position = 0;
 
-					printf("**GOD moved Hare to %d**\n", race->hare_position);
+					printf("**GOD moved Hare to %d at time %d**\n", race->hare_position, race->clk);
 				}
 
 				index++;
@@ -137,12 +133,12 @@ void *Hare(void *arg)
 
 		if (abs(race->turtle_position - race->hare_position) > race->hare_turtle_distance_for_sleep)
 		{
-			printf("Hare PANICS...");
+			// printf("Hare PANICS...");
 			race->hare_position += race->hare_speed;
 		}
 		else
 		{
-			printf("Hare sleeps...");
+			// printf("Hare sleeps...");
 		}
 
 		// sleep(1);
@@ -160,7 +156,7 @@ void *Turtle(void *arg)
 	{
 		begin_turn(race, turn);
 
-		printf("Turtle moves...\n");
+		// printf("Turtle moves...\n");
 		race->turtle_position += race->turtle_speed;
 
 		// sleep(1);
@@ -195,7 +191,7 @@ void *Report(void *arg)
 			race->race_on = 0;
 		}
 
-		sleep(1);
+		// sleep(1);
 		end_turn(race, turn);
 	}
 	return NULL;
@@ -210,7 +206,7 @@ void begin_turn(struct race *race, int turn)
 		while (race->turn != turn)
 			cond_wait(&race->cond0, &race->lock0);
 
-		printf("Current Time: %d\n", race->clk);
+		// printf("Current Time: %d\n", race->clk);
 		break;
 	case 1:
 		lock_acquire(&race->lock0);
