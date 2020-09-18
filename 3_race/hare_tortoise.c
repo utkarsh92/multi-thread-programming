@@ -17,7 +17,7 @@ struct race
 	//	Don't change these variables.
 	//	speeds are unit distance per unit time.
 	int printing_delay;
-	int tortoise_speed;					// speed of Turtle
+	int turtle_speed;					// speed of Turtle
 	int hare_speed;						// speed of hare
 	int hare_sleep_time;				// how much time does hare sleep (in case he decides to sleep)
 	int hare_turtle_distance_for_sleep; // minimum lead which hare has on turtle after which hare decides to move
@@ -31,6 +31,7 @@ struct race
 	int race_on;
 	int clk;
 	int turn;
+	int hare_position, turtle_position;
 	struct lock lock0, lock1, lock2, lock3;
 	struct condition cond0, cond1, cond2, cond3;
 };
@@ -58,15 +59,20 @@ char init(struct race *race)
 
 	race->clk = 0;
 	race->turn = 0;
+	race->hare_position = 0;
+	race->turtle_position = 0;
 	race->race_on = 1;
-	lock_acquire(&race->lock0);
 
+	//test parameters
+	race->printing_delay = 1;
+	race->finish_distance = 1000;
+
+
+	lock_acquire(&race->lock0);
 	pthread_create(&threads[0], NULL, Randomizer, (void *)race);
 	pthread_create(&threads[1], NULL, Hare, (void *)race);
 	pthread_create(&threads[2], NULL, Turtle, (void *)race);
 	pthread_create(&threads[3], NULL, Report, (void *)race);
-
-	cond_signal(&race->cond0, &race->lock0);
 	lock_release(&race->lock0);
 
 	while (race->race_on)
@@ -81,13 +87,40 @@ char init(struct race *race)
 void *Randomizer(void *arg)
 {
 	int turn = 0;
+	int index = 0;
 	struct race *race = (struct race *)arg;
 
 	while (race->race_on)
 	{
 		begin_turn(race, turn);
-		printf("randomizer\n");
-		sleep(1);
+
+		if ((race->repositioning_count != 0) && (index <= race->repositioning_count))
+		{
+			if (race->reposition[index].time == race->clk)
+			{
+				//God will move someone
+				if (race->reposition[index].player == 'T')
+				{
+					race->turtle_position += race->reposition[index].distance;
+					if (race->turtle_position < 0)
+						race->turtle_position = 0;
+
+					printf("**GOD moved Turtle to %d**\n", race->turtle_position);
+				}
+				else
+				{
+					race->hare_position += race->reposition[index].distance;
+					if (race->hare_position < 0)
+						race->hare_position = 0;
+
+					printf("**GOD moved Hare to %d**\n", race->hare_position);
+				}
+
+				index++;
+			}
+		}
+
+		// sleep(1);
 		end_turn(race, turn);
 	}
 	return NULL;
@@ -101,8 +134,18 @@ void *Hare(void *arg)
 	while (race->race_on)
 	{
 		begin_turn(race, turn);
-		printf("hare\n");
-		sleep(1);
+
+		if (abs(race->turtle_position - race->hare_position) > race->hare_turtle_distance_for_sleep)
+		{
+			printf("Hare PANICS...");
+			race->hare_position += race->hare_speed;
+		}
+		else
+		{
+			printf("Hare sleeps...");
+		}
+
+		// sleep(1);
 		end_turn(race, turn);
 	}
 	return NULL;
@@ -116,8 +159,11 @@ void *Turtle(void *arg)
 	while (race->race_on)
 	{
 		begin_turn(race, turn);
-		printf("turtle\n");
-		sleep(1);
+
+		printf("Turtle moves...\n");
+		race->turtle_position += race->turtle_speed;
+
+		// sleep(1);
 		end_turn(race, turn);
 	}
 
@@ -132,7 +178,23 @@ void *Report(void *arg)
 	while (race->race_on)
 	{
 		begin_turn(race, turn);
-		printf("report\n");
+
+		if (race->clk % race->printing_delay == 0)
+			printf("Report at the end of time %d ==> Hare: %d, Turtle: %d\n", race->clk, race->hare_position, race->turtle_position);
+
+		if((race->hare_position >= race->finish_distance) && (race->turtle_position < race->finish_distance))
+		{
+			race->winner = 'H';
+			printf("======HARE WINS======\n");
+			race->race_on = 0;
+		}
+		else if((race->turtle_position >= race->finish_distance))
+		{
+			race->winner = 'T';
+			printf("======TURTLE WINS======\n");
+			race->race_on = 0;
+		}
+
 		sleep(1);
 		end_turn(race, turn);
 	}
@@ -151,19 +213,19 @@ void begin_turn(struct race *race, int turn)
 		printf("Current Time: %d\n", race->clk);
 		break;
 	case 1:
-		lock_acquire(&race->lock1);
+		lock_acquire(&race->lock0);
 		while (race->turn != turn)
-			cond_wait(&race->cond1, &race->lock1);
+			cond_wait(&race->cond1, &race->lock0);
 		break;
 	case 2:
-		lock_acquire(&race->lock2);
+		lock_acquire(&race->lock0);
 		while (race->turn != turn)
-			cond_wait(&race->cond2, &race->lock2);
+			cond_wait(&race->cond2, &race->lock0);
 		break;
 	case 3:
-		lock_acquire(&race->lock3);
+		lock_acquire(&race->lock0);
 		while (race->turn != turn)
-			cond_wait(&race->cond3, &race->lock3);
+			cond_wait(&race->cond3, &race->lock0);
 		break;
 	}
 }
@@ -179,17 +241,17 @@ void end_turn(struct race *race, int turn)
 		lock_release(&race->lock0);
 		break;
 	case 1:
-		cond_signal(&race->cond2, &race->lock1);
-		lock_release(&race->lock1);
+		cond_signal(&race->cond2, &race->lock0);
+		lock_release(&race->lock0);
 		break;
 	case 2:
-		cond_signal(&race->cond3, &race->lock2);
-		lock_release(&race->lock2);
+		cond_signal(&race->cond3, &race->lock0);
+		lock_release(&race->lock0);
 		break;
 	case 3:
 		race->clk++;
-		cond_signal(&race->cond0, &race->lock3);
-		lock_release(&race->lock3);
+		cond_signal(&race->cond0, &race->lock0);
+		lock_release(&race->lock0);
 		break;
 	}
 }

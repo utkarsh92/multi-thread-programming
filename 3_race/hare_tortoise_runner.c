@@ -24,7 +24,7 @@ int parseInput(const char *filename, struct race *race)
         printf("wrong input file format\n");
         return -1;
     };
-    if (fscanf(f, "%d\n", &(race->tortoise_speed)) != 1)
+    if (fscanf(f, "%d\n", &(race->turtle_speed)) != 1)
     {
         printf("wrong input file format\n");
         return -1;
@@ -74,7 +74,7 @@ int parseInput(const char *filename, struct race *race)
 
     printf("+------------------------------+\n");
     printf("| Printing delay  : %7d    |\n", race->printing_delay);
-    printf("| Turtle speed    : %7d    |\n", race->tortoise_speed);
+    printf("| Turtle speed    : %7d    |\n", race->turtle_speed);
     printf("| Hare speed      : %7d    |\n", race->hare_speed);
     printf("| Hare Sleep time : %7d    |\n", race->hare_sleep_time);
     printf("| Hare-Turtle Dist: %7d    |\n", race->hare_turtle_distance_for_sleep);
