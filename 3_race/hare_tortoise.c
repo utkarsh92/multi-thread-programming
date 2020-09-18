@@ -78,19 +78,18 @@ char init(struct race *race)
 	return race->winner;
 }
 
-void *Turtle(void *arg)
+void *Randomizer(void *arg)
 {
-	int turn = 2;
+	int turn = 0;
 	struct race *race = (struct race *)arg;
 
 	while (race->race_on)
 	{
 		begin_turn(race, turn);
-		printf("turtle\n");
+		printf("randomizer\n");
 		sleep(1);
 		end_turn(race, turn);
 	}
-
 	return NULL;
 }
 
@@ -109,18 +108,19 @@ void *Hare(void *arg)
 	return NULL;
 }
 
-void *Randomizer(void *arg)
+void *Turtle(void *arg)
 {
-	int turn = 0;
+	int turn = 2;
 	struct race *race = (struct race *)arg;
 
 	while (race->race_on)
 	{
 		begin_turn(race, turn);
-		printf("randomizer\n");
+		printf("turtle\n");
 		sleep(1);
 		end_turn(race, turn);
 	}
+
 	return NULL;
 }
 
@@ -144,10 +144,11 @@ void begin_turn(struct race *race, int turn)
 	switch (turn)
 	{
 	case 0:
-		printf("Current Time: %d\n", race->clk);
 		lock_acquire(&race->lock0);
 		while (race->turn != turn)
 			cond_wait(&race->cond0, &race->lock0);
+
+		printf("Current Time: %d\n", race->clk);
 		break;
 	case 1:
 		lock_acquire(&race->lock1);
