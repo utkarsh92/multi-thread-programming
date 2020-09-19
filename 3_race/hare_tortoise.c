@@ -61,8 +61,9 @@ char init(struct race *race)
 
 	//test parameters
 	// race->printing_delay = 1;
+	// race->hare_sleep_time = 2;
+	// race->hare_turtle_distance_for_sleep = 200;
 	// race->finish_distance = 1000;
-
 
 	lock_acquire(&race->lock0);
 	pthread_create(&threads[0], NULL, Randomizer, (void *)race);
@@ -90,7 +91,7 @@ void *Randomizer(void *arg)
 	{
 		begin_turn(race, turn);
 
-		if ((race->repositioning_count != 0) && (index <= race->repositioning_count))
+		if (race->race_on && (race->repositioning_count != 0) && (index <= race->repositioning_count))
 		{
 			if (race->reposition[index].time == race->clk)
 			{
@@ -125,20 +126,34 @@ void *Randomizer(void *arg)
 void *Hare(void *arg)
 {
 	int turn = 1;
+	int sleep_count = 0;
 	struct race *race = (struct race *)arg;
 
 	while (race->race_on)
 	{
 		begin_turn(race, turn);
 
-		if (abs(race->turtle_position - race->hare_position) > race->hare_turtle_distance_for_sleep)
+		if (race->race_on)
 		{
-			// printf("Hare PANICS...");
-			race->hare_position += race->hare_speed;
-		}
-		else
-		{
-			// printf("Hare sleeps...");
+			if (sleep_count <= 0)
+			{
+				if ((race->hare_position - race->turtle_position) <= race->hare_turtle_distance_for_sleep)
+				{
+					// printf("Hare PANICS and sleep...");
+					race->hare_position += race->hare_speed;
+					sleep_count = race->hare_sleep_time;
+				}
+				else
+				{
+					// printf("Hare goes to sleep again...");
+					sleep_count = race->hare_sleep_time;
+				}
+			}
+			else
+			{
+				// printf("Hare sleeps...");
+				sleep_count--;
+			}
 		}
 
 		// sleep(1);
@@ -156,8 +171,11 @@ void *Turtle(void *arg)
 	{
 		begin_turn(race, turn);
 
-		// printf("Turtle moves...\n");
-		race->turtle_position += race->turtle_speed;
+		if (race->race_on)
+		{
+			// printf("Turtle moves...\n");
+			race->turtle_position += race->turtle_speed;
+		}
 
 		// sleep(1);
 		end_turn(race, turn);
@@ -176,15 +194,15 @@ void *Report(void *arg)
 		begin_turn(race, turn);
 
 		if (race->clk % race->printing_delay == 0)
-			printf("Report at the end of time %d ==> Hare: %d, Turtle: %d\n", race->clk, race->hare_position, race->turtle_position);
+			printf("Report (End of time %d) ==> Hare: %d, Turtle: %d\n", race->clk, race->hare_position, race->turtle_position);
 
-		if((race->hare_position >= race->finish_distance) && (race->turtle_position < race->finish_distance))
+		if ((race->hare_position >= race->finish_distance) && (race->turtle_position < race->finish_distance))
 		{
 			race->winner = 'H';
 			printf("======HARE WINS======\n");
 			race->race_on = 0;
 		}
-		else if((race->turtle_position >= race->finish_distance))
+		else if ((race->turtle_position >= race->finish_distance))
 		{
 			race->winner = 'T';
 			printf("======TURTLE WINS======\n");
