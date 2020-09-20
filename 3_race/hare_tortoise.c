@@ -72,9 +72,6 @@ char init(struct race *race)
 	pthread_create(&threads[3], NULL, Report, (void *)race);
 	lock_release(&race->lock0);
 
-	while (race->race_on)
-		;
-
 	for (int i = 0; i < 4; i++)
 		pthread_join(threads[i], NULL);
 
